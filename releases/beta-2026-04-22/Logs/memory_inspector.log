@@ -1,0 +1,118 @@
+auto-connected to COM10 @ 9600
+startup detect: begin (first pass)
+TX CR  0D  .
+TX CR  0D  .
+RX DET  0D 0A  ..
+RX DET  63 6D 64 3A  cmd:
+RX DRN  0D 0A  ..
+RX DRN  63 6D 64 3A  cmd:
+startup detect: resolved as COMMAND
+host-mode entry: begin (starting state COMMAND)
+TX AWL  41 57 4C 45 4E 20 38 0D  AWLEN 8.
+RX CMD  41 57 4C 45 4E 20 38 0D 0A  AWLEN 8..
+RX CMD  41 57 6C 65 6E 20 20 20 20 20 77 61 73 20 38 0D 0A  AWlen     was 8..
+RX CMD  41 57 6C 65 6E 20 20 20 20 20 6E 6F 77 20 38 0D 0A  AWlen     now 8..
+RX CMD  63 6D 64 3A  cmd:
+TX PAR  50 41 52 49 54 59 20 30 0D  PARITY 0.
+RX CMD  50 41 52 49 54 59 20 30 0D 0A  PARITY 0..
+RX CMD  50 41 52 69 74 79 20 20 20 20 77 61 73 20 30 20 28 6E 6F 6E 65 29 0D 0A  PARity    was 0 (none)..
+RX CMD  50 41 52 69 74 79 20 20 20 20 6E 6F 77 20 30 20 28 6E 6F 6E 65 29 0D 0A  PARity    now 0 (none)..
+RX CMD  63 6D 64 3A  cmd:
+TX 8BC  38 42 49 54 43 4F 4E 56 20 4F 4E 0D  8BITCONV ON.
+RX CMD  38 42 49 54 43 4F 4E 56 20 4F 4E 0D 0A  8BITCONV ON..
+RX CMD  38 42 69 74 63 6F 6E 76 20 20 77 61 73 20 4F 4E 0D 0A  8Bitconv  was ON..
+RX CMD  38 42 69 74 63 6F 6E 76 20 20 6E 6F 77 20 4F 4E 0D 0A  8Bitconv  now ON..
+RX CMD  63 6D 64 3A  cmd:
+TX RST  52 45 53 54 41 52 54 0D  RESTART.
+RX RST  52 45 53 54 41 52 54 0D 0A  RESTART..
+RX RST  20 20 0D 0A    ..
+RX RST  0D 0A  ..
+RX RST  0D 0A  ..
+RX RST  11 41 45 41 20 50 4B 2D 32 33 32 4D 20 44 61 74 61 20 43 6F 6E 74 72 6F 6C 6C 65 72 0D 0A  .AEA PK-232M Data Controller..
+RX RST  43 6F 70 79 72 69 67 68 74 20 28 43 29 20 31 39 38 36 2D 31 39 39 33 20 62 79 0D 0A  Copyright (C) 1986-1993 by..
+RX RST  41 64 76 61 6E 63 65 64 20 45 6C 65 63 74 72 6F 6E 69 63 20 41 70 70 6C 69 63 61 74 69 6F 6E 73 2C 20 49 6E 63 2E 0D 0A  Advanced Electronic Applications, Inc...
+RX RST  52 65 6C 65 61 73 65 20 30 31 2E 44 45 43 2E 39 33 0D 0A  Release 01.DEC.93..
+RX RST  56 65 72 2E 20 37 2E 30 0D 0A  Ver. 7.0..
+RX RST  50 41 43 54 4F 52 20 73 2F 6E 20 32 32 33 32 33 20 0D 0A  PACTOR s/n 22323 ..
+RX RST  0D 0A  ..
+RX RST  63 6D 64 3A  cmd:
+TX HYR  11 18 03 48 4F 53 54 20 59 0D  ...HOST Y.
+TX OGG  01 4F 47 47 17  .OGG.
+RX OGG  01 4F 47 47 00 17  .OGG..
+host-mode entry: resolved (HOSTMODE ready)
+PK232Client: started (reader + protocol threads)
+exit via MainFrame close
+PK232Client: stopped
+TX HOX  01 01 4F 48 4F 4E 17  ..OHON.
+RX HOA  01 4F 48 4F 00 17  .OHO..
+auto-connected to COM10 @ 9600
+startup detect: begin (first pass)
+TX CR  0D  .
+TX CR  0D  .
+RX DET  0D  .
+RX DET  0D  .
+TX ST  2A  *
+RX DET  2A  *
+TX HPB  01 01 4F 48 4F 4E 17  ..OHON.
+TX CR  0D  .
+RX DET  01 01 4F 48 4F 4E 17 0D  ..OHON..
+startup detect: OFF branch (prompting for power-cycle)
+RX BAN  00 20 20 0D 0A  .  ..
+RX BAN  0D 0A  ..
+RX BAN  0D 0A  ..
+RX BAN  11 41 45 41 20 50 4B 2D 32 33 32 4D 20 44 61 74 61 20 43 6F 6E 74 72 6F 6C 6C 65 72 0D 0A  .AEA PK-232M Data Controller..
+RX BAN  43 6F 70 79 72 69 67 68 74 20 28 43 29 20 31 39 38 36 2D 31 39 39 33 20 62 79 0D 0A  Copyright (C) 1986-1993 by..
+RX BAN  41 64 76 61 6E 63 65 64 20 45 6C 65 63 74 72 6F 6E 69 63 20 41 70 70 6C 69 63 61 74 69 6F 6E 73 2C 20 49 6E 63 2E 0D 0A  Advanced Electronic Applications, Inc...
+RX BAN  52 65 6C 65 61 73 65 20 30 31 2E 44 45 43 2E 39 33 0D 0A  Release 01.DEC.93..
+RX BAN  56 65 72 2E 20 37 2E 30 0D 0A  Ver. 7.0..
+RX BAN  50 41 43 54 4F 52 20 73 2F 6E 20 32 32 33 32 33 20 0D 0A  PACTOR s/n 22323 ..
+RX BAN  0D 0A  ..
+RX BAN  63 6D 64 3A  cmd:
+startup detect: begin (post power-cycle re-run)
+TX CR  0D  .
+TX CR  0D  .
+RX DET  0D 0A  ..
+RX DET  63 6D 64 3A  cmd:
+RX DRN  0D 0A  ..
+RX DRN  63 6D 64 3A  cmd:
+startup detect: resolved as COMMAND (after power-cycle)
+host-mode entry: begin (starting state COMMAND)
+TX AWL  41 57 4C 45 4E 20 38 0D  AWLEN 8.
+RX CMD  41 57 4C 45 4E 20 38 0D 0A  AWLEN 8..
+RX CMD  41 57 6C 65 6E 20 20 20 20 20 77 61 73 20 38 0D 0A  AWlen     was 8..
+RX CMD  41 57 6C 65 6E 20 20 20 20 20 6E 6F 77 20 38 0D 0A  AWlen     now 8..
+RX CMD  63 6D 64 3A  cmd:
+TX PAR  50 41 52 49 54 59 20 30 0D  PARITY 0.
+RX CMD  50 41 52 49 54 59 20 30 0D 0A  PARITY 0..
+RX CMD  50 41 52 69 74 79 20 20 20 20 77 61 73 20 30 20 28 6E 6F 6E 65 29 0D 0A  PARity    was 0 (none)..
+RX CMD  50 41 52 69 74 79 20 20 20 20 6E 6F 77 20 30 20 28 6E 6F 6E 65 29 0D 0A  PARity    now 0 (none)..
+RX CMD  63 6D 64 3A  cmd:
+TX 8BC  38 42 49 54 43 4F 4E 56 20 4F 4E 0D  8BITCONV ON.
+RX CMD  38 42 49 54 43 4F 4E 56 20 4F 4E 0D 0A  8BITCONV ON..
+RX CMD  38 42 69 74 63 6F 6E 76 20 20 77 61 73 20 4F 4E 0D 0A  8Bitconv  was ON..
+RX CMD  38 42 69 74 63 6F 6E 76 20 20 6E 6F 77 20 4F 4E 0D 0A  8Bitconv  now ON..
+RX CMD  63 6D 64 3A  cmd:
+TX RST  52 45 53 54 41 52 54 0D  RESTART.
+RX RST  52 45 53 54 41 52 54 0D 0A  RESTART..
+RX RST  20 20 0D 0A    ..
+RX RST  0D 0A  ..
+RX RST  0D 0A  ..
+RX RST  11 41 45 41 20 50 4B 2D 32 33 32 4D 20 44 61 74 61 20 43 6F 6E 74 72 6F 6C 6C 65 72 0D 0A  .AEA PK-232M Data Controller..
+RX RST  43 6F 70 79 72 69 67 68 74 20 28 43 29 20 31 39 38 36 2D 31 39 39 33 20 62 79 0D 0A  Copyright (C) 1986-1993 by..
+RX RST  41 64 76 61 6E 63 65 64 20 45 6C 65 63 74 72 6F 6E 69 63 20 41 70 70 6C 69 63 61 74 69 6F 6E 73 2C 20 49 6E 63 2E 0D 0A  Advanced Electronic Applications, Inc...
+RX RST  52 65 6C 65 61 73 65 20 30 31 2E 44 45 43 2E 39 33 0D 0A  Release 01.DEC.93..
+RX RST  56 65 72 2E 20 37 2E 30 0D 0A  Ver. 7.0..
+RX RST  50 41 43 54 4F 52 20 73 2F 6E 20 32 32 33 32 33 20 0D 0A  PACTOR s/n 22323 ..
+RX RST  0D 0A  ..
+RX RST  63 6D 64 3A  cmd:
+TX HYR  11 18 03 48 4F 53 54 20 59 0D  ...HOST Y.
+TX OGG  01 4F 47 47 17  .OGG.
+RX OGG  01 4F 47 47 00 17  .OGG..
+host-mode entry: resolved (HOSTMODE ready)
+PK232Client: started (reader + protocol threads)
+exit via MainFrame close
+PK232Client: stopped
+TX HOX  01 01 4F 48 4F 4E 17  ..OHON.
+shutdown: HO N write failed (Short write on COM10: wrote 0 of 7)
+shutdown: asserting 300 ms BREAK as HO N fallback
+shutdown: BREAK failed (setBreak failed on COM10)

@@ -1,0 +1,44 @@
+
+detection logic for modem state
+
+send a return 
+wait 250ms
+send a return
+if cmd: is recieved state is COMMAND and exit detection
+else continue
+send a "*"
+if serial data is recieved
+then check each line for the text PK-232
+if PK-232 is found mode is AUTOBAUD
+then keep reading until "cmd:" appears (banner terminator)
+and only then exit detection
+else continue
+send the following hex bytes $01 $01 $4F $48 $4F $4E $17
+send return
+if cmd: is recieved state is HOSTMODE and exit detection
+else continue
+print "power on PACKRATT"
+wait for serial data to flow and stop
+if no serial data after 5000ms send a return and if cmd: is recieved state is COMMAND and exit detection
+if serial data within 5000ms send a "*"
+if serial data is recieved 
+
+
+
+detecting COMMAND
+    after sending two returns "cmd:" is recieved
+
+detecting AUTOBAUD
+    send a "*" serial data follows containing the text PK-232
+    then wait for "cmd:" to appear (end of banner) before exiting detection
+
+detecting HOSTMODE
+    send the following hex bytes $01 $01 $4F $48 $4F $4E $17
+    send a return and "cmd:" is recieved
+
+detecting OFF
+    prompt the user to power on the unit
+    detect COMMAND
+    detect AUTOBAUD
+    detect HOSTMODE
+    

@@ -1,0 +1,6 @@
+C:\Users\Jadon\Documents\BFSoft\Memory_Inspector\test\dump\DumpControllerTests.java
+C:\Users\Jadon\Documents\BFSoft\Memory_Inspector\test\protocol\HostBlockTests.java
+C:\Users\Jadon\Documents\BFSoft\Memory_Inspector\test\protocol\HostCodecTests.java
+C:\Users\Jadon\Documents\BFSoft\Memory_Inspector\test\protocol\PK232ClientHelperTests.java
+C:\Users\Jadon\Documents\BFSoft\Memory_Inspector\test\util\HexUtilsTests.java
+C:\Users\Jadon\Documents\BFSoft\Memory_Inspector\test\util\PacketLoggerTests.java

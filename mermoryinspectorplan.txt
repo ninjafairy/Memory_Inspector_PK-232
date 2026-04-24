@@ -1,0 +1,241 @@
+Memory Inspector — Project Plan
+Below is a structured plan for the Java PK-232 RAM Memory Inspector based on PK232_HostMode_Reference.md, startupDetect.md, and logic. Following the plan is a Blind Spots / Missing Information section — I recommend resolving those items before any code is written.
+
+1. Goals & Scope
+A standalone Java (plain javac) Swing application that:
+
+Prompts for COM port + baud at launch (with "don't show again" persistence).
+Connects to a PK-232 modem, runs startup state detection, and forces the modem into HOSTMODE.
+Presents a main window with ADDRESS (4 hex chars) and BYTES (5-digit count) inputs, plus a Dump button.
+Executes a pipelined dump using host-mode AE (set address) + MM (read memory w/ auto-increment).
+Displays output live, 128 bytes/chars per line, switchable HEX/ASCII via radio buttons, updating every 32 bytes and scrolling.
+Optimized for throughput: next request issued before previous response is processed.
+2. High-Level Architecture
++-------------------+        +---------------------+       +----------------------+
+| Swing UI (EDT)    | <----> | Dump Controller     | <---> | Host-Mode Protocol   |
+|  - Startup dialog |        |  - state machine    |       |  - block encode/dec  |
+|  - Main window    |        |  - pipeline manager |       |  - AE / MM / GG      |
+|  - Settings menu  |        |                     |       |  - escape handling   |
++-------------------+        +---------------------+       +----------------------+
+          ^                           ^                               ^
+          | invokeLater batches       | lock-free queue               | byte stream
+          +---------------------------+-------------------------------+
+                                      |
+                              +-------------------+
+                              | Serial IO Thread  |
+                              | (jSerialComm)     |
+                              +-------------------+
+Layers:
+
+Serial I/O thread — blocking reads from COM port, pushes raw bytes to a parser.
+Host-Mode Parser — byte state machine WAIT_SOH → READ_CTL → PAYLOAD (with DLE escape) → ETB, emits HostBlock objects.
+Dump Controller — issues AE once, then a pipelined stream of MM reads; collects byte results; batches UI updates every 32 bytes.
+UI (EDT only) — renders lines of 128 bytes with leading HEX address.
+Settings Store — Java Preferences (or a .properties file next to the JAR) for port, baud, "skip startup dialog", and view mode.
+3. Module / Class Breakdown
+Package	Class	Responsibility
+ui
+StartupConnectDialog
+Port list, baud combo, "Don't show on launch" checkbox, OK/Cancel
+ui
+MainFrame
+Menu bar (Settings → Port…), ADDRESS/BYTES inputs, Dump button, HEX/ASCII radios, scrolling output pane
+ui
+HexDumpView
+Custom JTextArea/StyledDocument optimized for append-only lines
+config
+AppSettings
+Load/save preferences
+serial
+SerialLink
+Open/close/read/write wrapper over jSerialComm
+protocol
+HostBlock, HostCodec
+Encode/decode framing incl. escape
+protocol
+StartupDetector
+Implements the state detection flow
+protocol
+HostModeEntry
+Transitions Cmd→Hostmode (AWLEN 8, PARITY 0, 8BITCONV ON, RESTART, HOST ON, verify via OGG)
+protocol
+PK232Client
+High-level API: sendCommand, poll, readMemory(addr,len,callback)
+dump
+DumpController
+Pipelined dump engine + batching
+util
+HexUtils, Logger
+Helpers
+4. Startup & Connection Flow
+Load AppSettings.
+If skipStartupDialog == true AND saved port/baud exist → attempt auto-connect.
+Else show StartupConnectDialog.
+Open port (8-N-1, no flow control by default — required by host mode).
+Show modal progress dialog while StartupDetector runs.
+Branch on detected state:
+CMD → run HostModeEntry → verify with OGG probe → enter main window.
+AUTOBAUD → send ***\r sync → once cmd: → HostModeEntry.
+HOSTMODE → send OGG probe; if 01 4F 47 47 00 17 received, already good.
+OFF / UNKNOWN → show failure dialog with Retry / Change Port / Cancel.
+Main window active; status bar shows "HOSTMODE ready".
+Menu → Settings → Port… always re-opens StartupConnectDialog, disconnects, and re-runs the flow.
+
+5. Hostmode Entry Details (Cmd → Hostmode)
+Per PK232_HostMode_Reference.md §"Entering Host Mode":
+
+AWLEN 8<CR>
+PARITY 0<CR>
+8BITCONV ON<CR>
+RESTART<CR>   ← reboots; must re-detect cmd: prompt
+HOST ON<CR>
+Then send probe: 01 4F 47 47 17 and expect 01 4F 47 47 00 17. On failure retry with double-SOH recovery 01 01 4F 47 47 17.
+
+6. Memory Dump Pipeline
+Commands involved (host mode, CTL = 0x4F):
+
+AE <addr> → set ADDRESS target once.
+MM (no args, repeated) → reads one byte at current ADDRESS and auto-increments.
+GG → poll (only required if HPOLL ON).
+Proposed pipeline (to request the next byte before processing the last):
+
+DumpController computes target count N and window size W (e.g. 8–16 outstanding requests).
+Primes by sending AE <ADDR> and waiting for 0x4F ... 00 ack.
+Sends W MM commands back-to-back.
+As each response block arrives, the controller:
+Decodes 1 byte,
+Writes it into a preallocated byte[N],
+Immediately sends another MM to keep the window full,
+Every 32 bytes written, fires an EDT batch to HexDumpView.
+Completes when all N bytes received or user cancels.
+Handles error response codes per §Command response c table (e.g., 0x05 range).
+Throughput expectations (see Blind Spot B1) must be confirmed against HPOLL behavior.
+
+7. Display Rendering
+Output area: monospaced, append-only, auto-scroll-to-bottom unless the user scrolls up.
+HEX/ASCII radios switch a single DumpSession's byte buffer re-render.
+Line = 4-hex address + space + 128 fields.
+HEX mode: AAAA 00 01 02 ... FF (128 bytes × 3 chars = 384 chars/line + prefix).
+ASCII mode: AAAA .... non-printable → . (bytes 0x20–0x7E printed).
+Updates coalesced every 32 bytes via SwingUtilities.invokeLater, appending only completed 128-byte rows and maintaining a partial-row buffer.
+8. Persistence
+AppSettings fields:
+
+comPort (string, e.g. COM3)
+baud (int)
+skipStartupDialog (bool)
+viewMode (HEX/ASCII)
+lastAddress, lastBytes (convenience)
+Storage: java.util.prefs.Preferences under /BFSoft/MemoryInspector. No external config libs.
+
+9. Dependencies & Build
+Serial: jSerialComm (single jar, pure Java wrapper, no native install).
+Build: plain javac with a build.ps1 / build.bat invoking:
+javac -cp lib\jSerialComm-2.x.x.jar -d out src\...\*.java
+jar cfe MemoryInspector.jar app.Main -C out . -C lib .
+JRE target: Java 17 LTS.
+No Maven/Gradle per the "compiled with JavaC" constraint.
+10. Threading & Safety
+Serial read thread: blocking reads, parses blocks, pushes to a LinkedBlockingQueue<HostBlock>.
+Protocol thread: drains queue, correlates to pending commands, invokes callbacks.
+UI thread: only receives already-parsed batches via invokeLater.
+All shared state guarded by either thread confinement or java.util.concurrent primitives.
+11. Error Handling
+Serial open failure → dialog, return to startup dialog.
+Detection timeout (> MAX_TOTAL_DETECT_MS = 8000) → unknown-state dialog.
+Hostmode probe failure → retry w/ double-SOH, then fail.
+Dump errors: 0x5F bad-block / bad-CTL → resync (discard parser buffer, resend current MM).
+Per-command timeout (e.g., 1500 ms) → abort dump with message, keep modem in hostmode.
+On app exit: attempt HO N (01 4F 48 4F 4E 17) to leave host mode cleanly; if that fails, send serial BREAK.
+12. Test Plan (pre-code)
+Framing unit tests: encode/decode round-trips incl. escape of SOH/DLE/ETB in payload.
+Startup detector tests using a scripted fake serial stream (table-driven).
+HostModeEntry tests with simulated cmd: + probe responses.
+Dump pipeline tests with a synthetic PK-232 that answers MM deterministically.
+UI smoke test: 1 kB dump renders expected lines and address prefixes.
+Manual integration test on real PK-232.
+13. Milestones
+#	Deliverable
+M1
+Serial link + startup dialog + persistence
+M2
+Host-mode codec + parser + unit tests
+M3
+Startup detector + Cmd→Hostmode transition
+M4
+PK232Client.readMemory (non-pipelined) + simple dump display
+M5
+Pipelined dump + 32-byte UI batching
+M6
+HEX/ASCII toggle + address-prefixed 128-col layout
+M7
+Menu bar / settings re-open / graceful shutdown
+M8
+Hardening, logging, docs
+14. Blind Spots & Missing Information
+These items are not answered by the three reference docs and should be resolved before coding. I've grouped them by risk.
+
+A. Protocol semantics (high risk — affects throughput and correctness)
+A1. MM response shape. PK232_HostMode_Reference.md §AE/MM/IO says "MEMORY/I-O read/write values are ASCII numeric/hex command args" but does not define the exact response block format for a read. Specifically: is the returned byte an ASCII-hex pair (e.g. "3F" → 2 bytes of ASCII), a raw binary byte, or ASCII decimal? This changes parser logic and throughput estimates.
+
+ANSWER: The response is a framed block containing an ASCII-hex pair. Review the MM and AE commands in the pk-232mbx-operating-manual.pdf
+A2. AE argument format. You said "ADDRESS converted to decimal". The docs list hardware addresses in hex ($BF0D etc.). Is AE expected in ASCII decimal, ASCII hex, or does it accept a prefix? Need the exact command syntax.
+ANSWER: AE expects a decimal number, convert to hex adress to decimal before sending with AE
+A3. Pipelinability of MM. Section Data-send pacing talks about waiting for ACK on 0x2x data blocks, but is silent on whether a host may queue multiple 0x4F MM commands without waiting for each response. If the modem only accepts one outstanding command at a time, the pipeline depth = 1 and "request next byte before processing the last" reduces to overlapping just parsing with serial I/O, not multiple in-flight commands.
+ANSWER: pipeline depth = 1 no multiple in flight commands
+A4. HPOLL setting. Will the app set HPOLL OFF (push) or HPOLL ON (pull via GG)? Pull mode doubles round-trips per byte; push mode is faster but requires the dump controller to track implicit ordering.
+ANSWER: HPOLL OFF for faster speed
+A5. Bulk-read alternative. Is there an undocumented/omitted command that reads N bytes in one block (e.g. MEMORY n)? If not, at 9600 baud with 1 byte per round-trip the worst case is minutes for 99,999 bytes — user should be aware.
+ANSWER: NO bulk read option
+B. Performance expectations
+B1. Expected throughput. Given A1–A4, estimate bytes/sec at 9600/19200 baud and confirm this is acceptable. A 99,999-byte dump could be 15–40 minutes. Should the UI show ETA/progress/cancel?
+ANSWER: YES give effective dump rate in Bytes per second and ETA with progress bar and cancel button
+B2. Cancel semantics. Must the Dump button become a Cancel button mid-dump? Behavior on cancel (leave ADDRESS wherever it ended, re-init, etc.)?
+ANSWER: seperate cancel button, disable dump button while dump in progress
+C. UI specifics
+C1. 128 bytes per line — confirm. This is atypical (standard hex dumps use 16 or 32). 128 bytes in HEX = 384 chars + prefix → very wide (~2200 px monospaced). Is this correct, or did you mean "128 bytes per screen-refresh" (vs 16/line)? This is worth re-confirming.
+ANSWER: YES 128 bytes per line the primary view will be in ASCII with no spacing so 128 chars wide for the data portion
+C2. Address prefix width. With a 16-bit bus, 4 hex digits suffice. If lines are 128 bytes wide, the line address increments by 0x80. Confirm no mid-line wraparound handling needed beyond plain modulo.
+ANSWER: no midline wrap, output data should be a fixed 128 bytes wide, horizontal scroll bars as needed.
+C3. BYTES field = "5 numbers". I'm assuming decimal, max 99999, minimum 1. Is zero allowed? Leading zeros? Should the field also accept 0xXXXX hex?
+ANSWER: decimal only, make a snarky popup if 0 is input, leading 0 OK just strip.
+C4. ADDRESS wrap-around. If ADDR + BYTES > 0xFFFF, do we stop at 0xFFFF, wrap, or refuse?
+ANSWER: Stop at 0xFFFF with end of memory warning
+C5. Font / color for non-printable ASCII. Use . for 0x00–0x1F and 0x7F–0xFF?
+ANSWER: yes
+C6. Radio behavior. HEX/ASCII toggle — live re-render of the already-dumped buffer, or only affects future lines?
+ANSWER: rerender buffer
+D. Connection dialog
+D1. Baud list. The startup spec suggests 1200, 2400, 4800, 9600, 19200. Confirm this set and default (9600?).
+ANSWER: yes
+D2. Other serial params. Host mode requires 8-N-1. Should we expose data bits / parity / stop bits / flow control anyway, or hard-code to 8-N-1 with no flow control? Some installations may use RTS/CTS.
+ANSWER: Hard code 8-N-1
+D3. Port list refresh. Show a refresh button for hot-plug?
+ANSWER: YES
+D4. "Don't show on launch" reversal. If checked and auto-connect fails, the dialog must still appear — confirm this fallback behavior.
+ANSWER: YES
+E. State management
+E1. Already in HOSTMODE on launch. Can we trust that the PK-232 was left in a known good hostmode, or should we always HO N → re-detect cmd: → re-enter hostmode? Safer but slower.
+ANSWER: re enter host mode
+E2. RESTART side-effect. Sending RESTART during entry reboots the modem; any saved connection state is lost. OK if we're always fresh, but confirm.
+ANSWER: NEVER SEND RESTART COMMAND prompt user to power cycle modem if needed.
+E3. On application exit. Should the app leave the PK-232 in hostmode, send HO N, or prompt the user?
+ANSWER: exit hostmode on application exit
+E4. Conflict with startupDetect.md vs logic. The two detection specs differ in ordering and signals (e.g., logic searches for "PK-232" string after *, while startupDetect.md looks for a generic AUTOBAUD token). Which spec is authoritative? I recommend startupDetect.md because it's more rigorous, but please confirm.
+ANSWER: logic takes precidence as it is known and tested
+E5. OGG vs actual chapter reference. The reference says to probe with 01 4F 47 47 17. "OGG" is the mnemonic used. Confirm this probe is acceptable; the manual also mentions GG for poll — make sure we don't confuse probe vs poll.
+ANSWER: GG is the poll mnumonic command, the probe sequence is the formed and wrapped command packet, review the chapter 4 host mode for details in the technical manual
+F. Logging / diagnostics
+F1. Log level. Should we emit a rolling memory_inspector.log with raw hex of every block for diagnostics? File size cap / rotation?
+ANSWER: YES each packet should be on its own line, cap log file at 10KB start a new log file when full and only keep the latest 3
+F2. Error surfacing. Show protocol error codes (per 0x4F response c table) in the UI, or only in log?
+ANSWER: In the log for now we can pull it into the UI if needed.
+G. Packaging
+G1. Java version target. 17? 21? 8?
+ANSWER: Java 17
+G2. Distribution. Just .class files + jSerialComm.jar + .bat launcher, or a fat .jar?
+ANSWER: .bat launcher for development, generate fat/uber .jar for releases
+G3. Windows-only, or cross-platform? jSerialComm is cross-platform; anything else platform-specific?
+ANSWER: Windows required, cross platform a bonus
+Recommended next step
+Answer A1–A5 (protocol semantics) and C1 (confirm 128 bytes per line), because those drive both the parser and the entire UI layout. D2, E1, E3, E4 are the next tier. Once those are settled, I can produce the code against milestones M1–M8 above.
